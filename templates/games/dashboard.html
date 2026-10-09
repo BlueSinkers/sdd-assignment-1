@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · Madrid Hoops{% endblock %}
+
+{% macro action(c, name, label) %}
+  <form method="post" action="{{ url_for('games.respond', challenge_id=c.id, action=name) }}"><button>{{ label }}</button></form>
+{% endmacro %}
+
+{% macro court(c) %}
+  {% if c.court_maps_url %}<a href="{{ c.court_maps_url }}" target="_blank" rel="noopener">{{ c.court_label }}</a>{% else %}{{ c.court_label }}{% endif %}
+{% endmacro %}
+
+{% block content %}
+  <h1>{{ session.team_name }}</h1>
+
+  <section>
+    <h2>Challenges for you</h2>
+    {% for c in received %}
+      <p><strong>{{ c.challenger_name }}</strong> wants to play {{ c.format }} at {{ court(c) }} on {{ c.when }}.</p>
+      <div class="row">{{ action(c, 'accept', 'Agree to play') }} {{ action(c, 'decline', 'Decline') }}</div>
+    {% else %}
+      <p class="muted">Nothing waiting for you.</p>
+    {% endfor %}
+  </section>
+
+  <section>
+    <h2>Challenges you sent</h2>
+    {% for c in sent %}
+      <p>You challenged <strong>{{ c.opponent_name }}</strong> at {{ court(c) }} on {{ c.when }}. Waiting for them to answer.</p>
+      {{ action(c, 'cancel', 'Cancel') }}
+    {% else %}
+      <p class="muted">No open challenges. <a href="{{ url_for('teams.team_list') }}">Find a team to challenge.</a></p>
+    {% endfor %}
+  </section>
+
+  <section>
+    <h2>Upcoming games</h2>
+    {% for c in upcoming %}
+      <p>{{ c.when }}: <strong>{{ c.challenger_name }} vs {{ c.opponent_name }}</strong> at {{ court(c) }}</p>
+    {% else %}
+      <p class="muted">No games agreed yet.</p>
+    {% endfor %}
+  </section>
+
+  {% if history %}
+    <section>
+      <h2>History</h2>
+      <table>
+        <tr><th>When</th><th>Game</th><th>Status</th></tr>
+        {% for c in history %}
+          <tr><td>{{ c.when }}</td><td>{{ c.challenger_name }} vs {{ c.opponent_name }}</td><td>{{ c.status }}</td></tr>
+        {% endfor %}
+      </table>
+    </section>
+  {% endif %}
+{% endblock %}

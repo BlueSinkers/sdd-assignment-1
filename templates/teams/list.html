@@ -4,7 +4,7 @@
   <h1>Teams</h1>
   {% if teams %}
     <table>
-      <tr><th>Team</th><th>Format</th><th>Players</th><th>Level</th><th>District</th><th>Captain</th></tr>
+      <tr><th>Team</th><th>Format</th><th>Players</th><th>Level</th><th>District</th><th>Captain</th><th></th></tr>
       {% for t in teams %}
         <tr>
           <td>{{ t.name }}</td>
@@ -13,6 +13,15 @@
           <td>{{ t.skill_level }}</td>
           <td>{{ t.district or '—' }}</td>
           <td>{{ t.captain_name }}</td>
+          <td>
+            {% if session.team_id and t.id != session.team_id %}
+              {% if t.format == session.team_format %}
+                <a href="{{ url_for('games.challenge', opponent_id=t.id) }}">Challenge</a>
+              {% else %}
+                <span class="muted">plays {{ t.format }}</span>
+              {% endif %}
+            {% endif %}
+          </td>
         </tr>
       {% endfor %}
     </table>

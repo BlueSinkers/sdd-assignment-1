@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Courts · Madrid Hoops{% endblock %}
+{% block content %}
+  <h1>Courts</h1>
+  {% if courts %}
+    <table>
+      <tr><th>Court</th><th>Address</th><th>Map</th></tr>
+      {% for c in courts %}
+        <tr>
+          <td>{{ c.name or '—' }}</td>
+          <td>{{ c.address }}</td>
+          <td>{% if c.maps_url %}<a href="{{ c.maps_url }}" target="_blank" rel="noopener">Open in Maps</a>{% endif %}</td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p class="muted">No courts yet. Captains can add the first one below.</p>
+  {% endif %}
+
+  {% if session.team_id %}
+    <section>
+      <h2>Add a court</h2>
+      <form method="post" class="stack">
+        <label>Name (optional) <input name="name" value="{{ form.get('name', '') }}" placeholder="e.g. Madrid Río courts"></label>
+        <label>Address <input name="address" value="{{ form.get('address', '') }}" required></label>
+        <label>Google Maps link (optional) <input name="maps_url" type="url" value="{{ form.get('maps_url', '') }}" placeholder="https://maps.app.goo.gl/..."></label>
+        <button>Add court</button>
+      </form>
+    </section>
+  {% else %}
+    <p><a href="{{ url_for('teams.login') }}">Log in</a> as a captain to add a court.</p>
+  {% endif %}
+{% endblock %}

@@ -24,6 +24,7 @@ def register():
             else:
                 session["team_id"] = team_id
                 session["team_name"] = team["name"]
+                session["team_format"] = team["format"]
                 flash(f"Welcome, {team['name']}!")
                 return redirect(url_for("teams.team_list"))
         for error in errors:
@@ -45,8 +46,9 @@ def login():
         if team and logic.password_matches(team["password_hash"], password):
             session["team_id"] = team["id"]
             session["team_name"] = team["name"]
+            session["team_format"] = team["format"]
             flash(f"Logged in as {team['name']}.")
-            return redirect(url_for("teams.team_list"))
+            return redirect(url_for("games.dashboard"))
         # Same message either way, so the form does not reveal which team names exist.
         flash("Wrong team name or password.")
     return render_template("teams/login.html")
@@ -56,4 +58,4 @@ def login():
 def logout():
     session.clear()
     flash("Logged out.")
-    return redirect(url_for("home"))
+    return redirect(url_for("games.home"))

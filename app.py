@@ -9,9 +9,10 @@ variables:
 """
 import os
 
-from flask import Flask, render_template
+from flask import Flask
 
 import db
+from games.routes import bp as games_bp
 from teams.routes import bp as teams_bp
 
 
@@ -23,10 +24,7 @@ def create_app():
     app.teardown_appcontext(db.close_conn)
 
     app.register_blueprint(teams_bp)
-
-    @app.route("/")
-    def home():
-        return render_template("home.html")
+    app.register_blueprint(games_bp)
 
     return app
 

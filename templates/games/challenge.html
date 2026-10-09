@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Challenge {{ opponent.name }} · Madrid Hoops{% endblock %}
+{% block content %}
+  <h1>Challenge {{ opponent.name }}</h1>
+  <p class="muted">{{ opponent.format }} · {{ opponent.player_count }} players</p>
+
+  {% if courts %}
+    <form method="post" class="stack">
+      <label>Court
+        <select name="court_id">
+          {% for c in courts %}
+            <option value="{{ c.id }}" {% if form.get('court_id') == c.id|string %}selected{% endif %}>{{ c.name or c.address }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Date and time (Madrid) <input name="start_time" type="datetime-local" value="{{ form.get('start_time', '') }}" required></label>
+      <button>Send challenge</button>
+    </form>
+  {% else %}
+    <p>There are no courts yet. <a href="{{ url_for('games.courts') }}">Add one first.</a></p>
+  {% endif %}
+{% endblock %}

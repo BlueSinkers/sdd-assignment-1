@@ -14,13 +14,18 @@
     label { display: grid; gap: 4px; }
     input, select, button { font: inherit; padding: 6px 8px; }
     table { border-collapse: collapse; width: 100%; }
+    .muted { color: #888; }
+    .row { display: flex; gap: 8px; }
+    section { margin: 24px 0; }
     th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #eee; }
   </style>
 </head>
 <body>
   <nav>
-    <a href="{{ url_for('home') }}"><strong>Madrid Hoops</strong></a>
+    <a href="{{ url_for('games.home') }}"><strong>Madrid Hoops</strong></a>
     <a href="{{ url_for('teams.team_list') }}">Teams</a>
+    <a href="{{ url_for('games.courts') }}">Courts</a>
+    {% if session.team_id %}<a href="{{ url_for('games.dashboard') }}">Dashboard</a>{% endif %}
     <div class="right">
       {% if session.team_id %}
         <span>{{ session.team_name }}</span>
