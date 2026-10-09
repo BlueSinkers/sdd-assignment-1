@@ -11,6 +11,8 @@ and existing data is never dropped.
 import os
 import sqlite3
 
+from flask import g
+
 DB_FILENAME = "hoops.db"
 
 # Teams domain. Owns everything about a team and its captain's login.
@@ -67,6 +69,20 @@ def connect(path=None):
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
+
+
+def get_conn():
+    """One connection per web request, opened the first time it is needed."""
+    if "conn" not in g:
+        g.conn = connect()
+    return g.conn
+
+
+def close_conn(exception=None):
+    """Called by Flask at the end of every request."""
+    conn = g.pop("conn", None)
+    if conn is not None:
+        conn.close()
 
 
 def init_db(path=None):

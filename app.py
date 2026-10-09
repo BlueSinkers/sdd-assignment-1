@@ -2,23 +2,31 @@
 
 Start with `python app.py`. Configuration comes only from environment
 variables:
-    PORT        port to listen on            (default 8000)
-    DATA_DIR    folder for the SQLite file   (default ./data)
+    PORT        port to listen on                     (default 8000)
+    DATA_DIR    folder for the SQLite file            (default ./data)
+    SECRET_KEY  signs the login cookie; set it for real use
+                                                      (default: a dev-only value)
 """
 import os
 
-from flask import Flask
+from flask import Flask, render_template
 
 import db
+from teams.routes import bp as teams_bp
 
 
 def create_app():
     app = Flask(__name__)
+    app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-only-not-secret")
+
     db.init_db()
+    app.teardown_appcontext(db.close_conn)
+
+    app.register_blueprint(teams_bp)
 
     @app.route("/")
     def home():
-        return "Madrid Hoops is running."
+        return render_template("home.html")
 
     return app
 

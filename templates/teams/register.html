@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Register team · Madrid Hoops{% endblock %}
+{% block content %}
+  <h1>Register your team</h1>
+  <form method="post" class="stack">
+    <label>Team name <input name="name" value="{{ form.get('name', '') }}" required></label>
+    <label>Password <input name="password" type="password" required></label>
+    <label>Captain name <input name="captain_name" value="{{ form.get('captain_name', '') }}" required></label>
+    <label>Format
+      <select name="format">
+        {% for f in formats %}
+          <option value="{{ f }}" {% if form.get('format') == f %}selected{% endif %}>{{ f }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Number of players <input name="player_count" type="number" min="1" value="{{ form.get('player_count', '') }}" required></label>
+    <label>Skill level
+      <select name="skill_level">
+        {% for s in skill_levels %}
+          <option value="{{ s }}" {% if form.get('skill_level') == s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>District (optional) <input name="district" value="{{ form.get('district', '') }}" placeholder="e.g. Chamberí"></label>
+    <button>Create team</button>
+  </form>
+{% endblock %}

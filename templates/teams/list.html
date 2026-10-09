@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Teams · Madrid Hoops{% endblock %}
+{% block content %}
+  <h1>Teams</h1>
+  {% if teams %}
+    <table>
+      <tr><th>Team</th><th>Format</th><th>Players</th><th>Level</th><th>District</th><th>Captain</th></tr>
+      {% for t in teams %}
+        <tr>
+          <td>{{ t.name }}</td>
+          <td>{{ t.format }}</td>
+          <td>{{ t.player_count }}</td>
+          <td>{{ t.skill_level }}</td>
+          <td>{{ t.district or '—' }}</td>
+          <td>{{ t.captain_name }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p>No teams yet. <a href="{{ url_for('teams.register') }}">Be the first.</a></p>
+  {% endif %}
+{% endblock %}

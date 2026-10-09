@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Madrid Hoops</h1>
+  <p>Find another basketball team in Madrid and agree on a game.</p>
+  <p><a href="{{ url_for('teams.team_list') }}">Browse teams</a> or <a href="{{ url_for('teams.register') }}">register yours</a>.</p>
+{% endblock %}

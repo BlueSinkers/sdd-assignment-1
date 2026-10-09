@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Madrid Hoops{% endblock %}</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 760px; margin: 0 auto; padding: 0 16px; color: #222; }
+    nav { display: flex; gap: 16px; align-items: center; padding: 16px 0; border-bottom: 1px solid #ddd; }
+    nav .right { margin-left: auto; display: flex; gap: 12px; align-items: center; }
+    a { color: #c2410c; }
+    .flash { background: #fff7ed; border: 1px solid #fdba74; padding: 8px 12px; margin: 12px 0; border-radius: 6px; }
+    form.stack { display: grid; gap: 12px; max-width: 360px; }
+    label { display: grid; gap: 4px; }
+    input, select, button { font: inherit; padding: 6px 8px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #eee; }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="{{ url_for('home') }}"><strong>Madrid Hoops</strong></a>
+    <a href="{{ url_for('teams.team_list') }}">Teams</a>
+    <div class="right">
+      {% if session.team_id %}
+        <span>{{ session.team_name }}</span>
+        <form method="post" action="{{ url_for('teams.logout') }}"><button>Log out</button></form>
+      {% else %}
+        <a href="{{ url_for('teams.login') }}">Log in</a>
+        <a href="{{ url_for('teams.register') }}">Register team</a>
+      {% endif %}
+    </div>
+  </nav>
+
+  {% for message in get_flashed_messages() %}
+    <div class="flash">{{ message }}</div>
+  {% endfor %}
+
+  {% block content %}{% endblock %}
+</body>
+</html>
