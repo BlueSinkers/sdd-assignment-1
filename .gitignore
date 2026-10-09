@@ -1,0 +1,19 @@
+# Local environment
+.venv/
+venv/
+.env
+
+# Local SQLite data (the app creates it on first boot; never commit a .db)
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Python / test artifacts
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+
+.DS_Store
