@@ -9,7 +9,7 @@ Alternatives considered: Django, rejected because its ORM, admin, and auth syste
 Consequences: Very few dependencies, and each domain can become its own small Flask app in Assignment 2. The cost is writing SQL and input validation by hand, which an ORM or form library would otherwise handle.
 
 ## 2. Two domains, Teams and Games, that only talk through teams/api.py
-Date: 2026-10-10
+Date: 2026-10-09
 Status: Decided
 Context: Assignment 2 splits this app into separate services, so the two feature areas need a clear boundary now. Games needs a few facts about teams (whether a team exists, its name, its format) to check a challenge, but should not depend on how Teams stores its data.
 Decision: Each domain is its own folder with logic.py (plain Python rules), store.py (its own SQL, its own tables), and routes.py (a Flask Blueprint). Games never queries the teams table; it calls `teams.api.get_team_summary`, which returns a small dict of public fields with no password hash.
@@ -17,7 +17,7 @@ Alternatives considered: Letting Games join `challenges` to `teams` in SQL to ge
 Consequences: In Assignment 2, `get_team_summary` becomes an HTTP call to a Teams service and the Games code stays the same. The cost is an extra lookup per team when showing a list of challenges, instead of one SQL join.
 
 ## 3. Challenges store team ids with no foreign key to teams
-Date: 2026-10-10
+Date: 2026-10-09
 Status: Decided
 Context: A challenge belongs to the Games domain but refers to two teams owned by the Teams domain. SQLite can only enforce a foreign key between tables in the same database file, and Assignment 2 will give each service its own database.
 Decision: `challenges.challenger_team_id`, `challenges.opponent_team_id`, and `courts.proposed_by_team_id` are plain integers with no FOREIGN KEY. Games checks that a team exists through `teams.api` before saving. `challenges.court_id` does keep a real FOREIGN KEY to `courts`, because both tables are in the Games domain and will stay together.
