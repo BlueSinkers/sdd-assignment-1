@@ -83,3 +83,15 @@ def test_teams_api_summary_hides_private_fields(conn):
         "id": team_id, "name": "Retiro Five", "format": "5v5", "player_count": 6,
     }
     assert teams_api.get_team_summary(conn, 999) is None
+
+
+def test_record_attendance_replaces_earlier_number(conn):
+    court_id = store.create_court(conn, COURT, proposed_by_team_id=1)
+    challenge_id = store.create_challenge(conn, make_challenge(court_id))
+    store.record_attendance(conn, {"challenge_id": challenge_id, "team_id": 1, "players_attended": 4})
+    store.record_attendance(conn, {"challenge_id": challenge_id, "team_id": 1, "players_attended": 6})
+    store.record_attendance(conn, {"challenge_id": challenge_id, "team_id": 2, "players_attended": 5})
+
+    assert len(store.list_attendance(conn)) == 2
+    assert store.attendance_for_team(conn, 1) == {challenge_id: 6}
+    assert len(store.list_all_challenges(conn)) == 1

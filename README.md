@@ -17,7 +17,9 @@ Madrid Hoops helps basketball teams in Madrid find opponents and agree on games.
   - A team can't challenge itself.
   - Games must be in the future.
   - No team or court can have two agreed games starting less than 2 hours apart.
-- Dashboard for each captain: challenges received, challenges sent, upcoming games, history.
+- Dashboard for each captain: challenges received, challenges sent, upcoming games, played games, history.
+- Turnout: after an agreed game has started, each captain records how many of their players came (0 up to their roster size). Recording again replaces the number.
+- Stats page (`/stats`): games played, upcoming games, open challenges, acceptance rate, games by format, players attended, average players per game, turnout vs. roster size, busiest courts, and most active teams.
 - Home page: upcoming agreed games across Madrid.
 
 ## Run it directly
@@ -73,9 +75,9 @@ teams/              Teams domain
   routes.py           register, login, logout, team list
   api.py              the only functions other domains may call
 games/              Games domain
-  logic.py            court and challenge rules, clash check (plain Python)
-  store.py            SQL for the courts and challenges tables
-  routes.py           courts, challenge form, accept/decline/cancel, dashboard, home
+  logic.py            court, challenge, and turnout rules, clash check, stats (plain Python)
+  store.py            SQL for the courts, challenges, and attendance tables
+  routes.py           courts, challenge form, accept/decline/cancel, turnout, dashboard, stats, home
 templates/          HTML pages
 tests/              pytest tests
 Dockerfile          course template with the app's files filled in
@@ -99,17 +101,17 @@ Name                Stmts   Miss  Cover
 app.py                 16      2    88%
 db.py                  30      0   100%
 games/__init__.py       0      0   100%
-games/logic.py         71      0   100%
-games/routes.py        99      0   100%
-games/store.py         25      0   100%
+games/logic.py        106      0   100%
+games/routes.py       138      0   100%
+games/store.py         35      0   100%
 teams/__init__.py       0      0   100%
 teams/api.py            6      0   100%
 teams/logic.py         42      0   100%
 teams/routes.py        43      0   100%
 teams/store.py         14      0   100%
 ---------------------------------------
-TOTAL                 346      2    99%
-67 passed
+TOTAL                 430      2    99%
+81 passed
 ```
 
 The two uncovered lines in `app.py` are the `if __name__ == "__main__":` block that starts the server.
@@ -137,7 +139,7 @@ Repository: /Users/BlueSyncers/Documents/Programs/school projects/sdd-assignment
 
 ==> Data persists, and a second boot does not re-seed
   PASS  volume at /data persists
-  PASS  row counts unchanged across restart: challenges=0 courts=0 teams=0
+  PASS  row counts unchanged across restart: attendance=0 challenges=0 courts=0 teams=0
 
 ==> PORT override is honoured (not hardcoded)
   PASS  HTTP 200 from http://localhost:9123/

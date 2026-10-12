@@ -66,3 +66,34 @@ def list_accepted(conn):
     return conn.execute(
         "SELECT * FROM challenges WHERE status = 'accepted' ORDER BY start_time"
     ).fetchall()
+
+
+def list_all_challenges(conn):
+    return conn.execute("SELECT * FROM challenges").fetchall()
+
+
+# --- Attendance ---------------------------------------------------------------
+
+def record_attendance(conn, record):
+    """Save a team's turnout for a game, replacing any earlier number."""
+    conn.execute(
+        """INSERT INTO attendance (challenge_id, team_id, players_attended)
+           VALUES (:challenge_id, :team_id, :players_attended)
+           ON CONFLICT (challenge_id, team_id)
+           DO UPDATE SET players_attended = excluded.players_attended,
+                         recorded_at = datetime('now')""",
+        record,
+    )
+    conn.commit()
+
+
+def list_attendance(conn):
+    return conn.execute("SELECT * FROM attendance").fetchall()
+
+
+def attendance_for_team(conn, team_id):
+    """{challenge_id: players_attended} for one team."""
+    rows = conn.execute(
+        "SELECT challenge_id, players_attended FROM attendance WHERE team_id = ?", (team_id,)
+    ).fetchall()
+    return {r["challenge_id"]: r["players_attended"] for r in rows}

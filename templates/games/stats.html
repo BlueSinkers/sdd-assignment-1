@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Stats · Madrid Hoops{% endblock %}
+
+{% macro tile(label, value, note='') %}
+  <div class="tile">
+    <div class="tile-label">{{ label }}</div>
+    <div class="tile-value">{{ '—' if value is none else value }}</div>
+    {% if note %}<div class="tile-note">{{ note }}</div>{% endif %}
+  </div>
+{% endmacro %}
+
+{% macro ranking(title, rows, unit) %}
+  <div class="panel">
+    <h2>{{ title }}</h2>
+    {% if rows %}
+      {% set top = rows[0][1] %}
+      <table class="bars">
+        {% for name, count in rows %}
+          <tr title="{{ name }}: {{ count }} {{ unit }}">
+            <td class="bar-name">{{ name }}</td>
+            <td class="bar-cell"><span class="bar" style="width: {{ (100 * count / top)|round|int }}%"></span></td>
+            <td class="bar-count">{{ count }}</td>
+          </tr>
+        {% endfor %}
+      </table>
+    {% else %}
+      <p class="muted">No agreed games yet.</p>
+    {% endif %}
+  </div>
+{% endmacro %}
+
+{% block content %}
+  <h1>Madrid Hoops stats</h1>
+
+  <section>
+    <h2 class="section-label">Games</h2>
+    <div class="tiles">
+      {{ tile('Games played', s.games_played) }}
+      {{ tile('Upcoming games', s.upcoming_games) }}
+      {{ tile('Open challenges', s.pending_challenges) }}
+      {{ tile('Acceptance rate', none if s.acceptance_rate is none else s.acceptance_rate ~ '%', 'accepted vs. declined') }}
+      {{ tile('3v3 games', s.games_by_format['3v3']) }}
+      {{ tile('5v5 games', s.games_by_format['5v5']) }}
+    </div>
+  </section>
+
+  <section>
+    <h2 class="section-label">Attendance</h2>
+    <div class="tiles">
+      {{ tile('Players attended', s.players_attended, 'recorded by captains') }}
+      {{ tile('Avg per game', s.avg_players_per_game, 'both teams combined') }}
+      {{ tile('Turnout vs roster', none if s.turnout_rate is none else s.turnout_rate ~ '%', 'players who came / roster size') }}
+    </div>
+  </section>
+
+  <div class="panels">
+    {{ ranking('Busiest courts', s.busiest_courts, 'agreed games') }}
+    {{ ranking('Most active teams', s.most_active_teams, 'agreed games') }}
+  </div>
+{% endblock %}

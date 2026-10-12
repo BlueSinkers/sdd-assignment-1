@@ -144,16 +144,76 @@ def dashboard():
 
     conn = db.get_conn()
     now = madrid_now().strftime(logic.TIME_FORMAT)
-    received, sent, upcoming, history = [], [], [], []
+    turnout = store.attendance_for_team(conn, team_id)
+    received, sent, upcoming, played, history = [], [], [], [], []
     for row in store.list_challenges_for_team(conn, team_id):
         c = describe(conn, row)
         if c["status"] == "pending" and c["start_time"] >= now:
             (received if c["opponent_team_id"] == team_id else sent).append(c)
         elif c["status"] == "accepted" and c["start_time"] >= now:
             upcoming.append(c)
+        elif c["status"] == "accepted":
+            c["my_turnout"] = turnout.get(c["id"])
+            played.append(c)
         else:
             history.append(c)
     return render_template(
         "games/dashboard.html",
-        received=received, sent=sent, upcoming=upcoming, history=history,
+        received=received, sent=sent, upcoming=upcoming, played=played, history=history,
     )
+
+
+@bp.route("/games/<int:challenge_id>/turnout", methods=["POST"])
+def record_turnout(challenge_id):
+    team_id = logged_in_team_id()
+    if not team_id:
+        return redirect(url_for("teams.login"))
+
+    conn = db.get_conn()
+    game = store.get_challenge(conn, challenge_id)
+    if game is None:
+        flash("That game does not exist.")
+        return redirect(url_for("games.dashboard"))
+
+    team = teams_api.get_team_summary(conn, team_id)
+    record, errors = logic.validate_attendance(
+        game, team_id, request.form.get("players"), team["player_count"], madrid_now()
+    )
+    if record:
+        store.record_attendance(conn, record)
+        flash("Turnout saved.")
+    for error in errors:
+        flash(error)
+    return redirect(url_for("games.dashboard"))
+
+
+@bp.route("/stats")
+def stats():
+    conn = db.get_conn()
+    attendance = store.list_attendance(conn)
+
+    # Team details come through teams_api, never the teams table (ADR 2).
+    team_cache = {}
+
+    def team(team_id):
+        if team_id not in team_cache:
+            team_cache[team_id] = teams_api.get_team_summary(conn, team_id)
+        return team_cache[team_id]
+
+    roster_sizes = {
+        a["team_id"]: team(a["team_id"])["player_count"]
+        for a in attendance if team(a["team_id"])
+    }
+    numbers = logic.compute_stats(
+        store.list_all_challenges(conn), attendance, roster_sizes, madrid_now()
+    )
+
+    def court_label(court_id):
+        court = store.get_court(conn, court_id)
+        return court["name"] or court["address"]
+
+    numbers["busiest_courts"] = [(court_label(i), n) for i, n in numbers["busiest_courts"]]
+    numbers["most_active_teams"] = [
+        (team(i)["name"] if team(i) else "(deleted team)", n) for i, n in numbers["most_active_teams"]
+    ]
+    return render_template("games/stats.html", s=numbers)

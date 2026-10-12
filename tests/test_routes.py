@@ -154,3 +154,53 @@ def test_missing_team_and_challenge(captains):
     assert "That team does not exist." in flashes(a.get("/challenge/999", follow_redirects=True))
     assert "That challenge does not exist." in flashes(
         a.post("/challenges/999/accept", follow_redirects=True))
+
+
+# --- Turnout and stats --------------------------------------------------------
+
+def add_played_game(tmp_path):
+    """Insert an agreed game in the past directly: the pages only allow future games."""
+    import db
+    from games import store as games_store
+    conn = db.connect(tmp_path / "hoops.db")
+    challenge_id = games_store.create_challenge(conn, {
+        "challenger_team_id": 1, "opponent_team_id": 2, "court_id": 1,
+        "start_time": "2026-01-10T18:00", "format": "5v5",
+    })
+    games_store.set_status(conn, challenge_id, "accepted")
+    conn.close()
+    return challenge_id
+
+
+def test_record_turnout_and_see_it_on_stats(app, captains, tmp_path):
+    a, b = captains
+    game_id = add_played_game(tmp_path)
+
+    assert "How many of your players came?" in a.get("/dashboard").get_data(as_text=True)
+    assert "Turnout saved." in flashes(a.post(f"/games/{game_id}/turnout", data={"players": 5},
+                                              follow_redirects=True))
+    assert "Turnout saved." in flashes(b.post(f"/games/{game_id}/turnout", data={"players": 4},
+                                              follow_redirects=True))
+    assert "Enter a number from 0 to 6 (your roster size)." in flashes(
+        a.post(f"/games/{game_id}/turnout", data={"players": 9}, follow_redirects=True))
+
+    page = app.test_client().get("/stats").get_data(as_text=True)
+    assert "Players attended" in page
+    assert ">9<" in page                 # 5 + 4 players
+    assert ">75%<" in page               # 9 of 12 roster spots (6 + 6)
+    assert "Madrid Rio" in page and "Retiro Five" in page
+
+
+def test_turnout_for_missing_game(captains):
+    a, _ = captains
+    assert "That game does not exist." in flashes(
+        a.post("/games/999/turnout", data={"players": 1}, follow_redirects=True))
+
+
+def test_turnout_logged_out_redirects(app):
+    assert app.test_client().post("/games/1/turnout", data={"players": 1}).status_code == 302
+
+
+def test_stats_page_with_no_games(app):
+    page = app.test_client().get("/stats").get_data(as_text=True)
+    assert "No agreed games yet." in page

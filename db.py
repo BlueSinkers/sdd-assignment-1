@@ -55,6 +55,16 @@ CREATE TABLE IF NOT EXISTS challenges (
     created_at          TEXT    NOT NULL DEFAULT (datetime('now')),
     responded_at        TEXT
 );
+
+-- How many of a team's players actually showed up to an agreed game.
+-- One row per team per game; recording again replaces the number.
+CREATE TABLE IF NOT EXISTS attendance (
+    challenge_id      INTEGER NOT NULL REFERENCES challenges(id),
+    team_id           INTEGER NOT NULL,
+    players_attended  INTEGER NOT NULL CHECK (players_attended >= 0),
+    recorded_at       TEXT    NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (challenge_id, team_id)
+);
 """
 
 

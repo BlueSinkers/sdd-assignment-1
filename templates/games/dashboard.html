@@ -41,6 +41,21 @@
     {% endfor %}
   </section>
 
+  {% if played %}
+    <section>
+      <h2>Played games: record turnout</h2>
+      {% for c in played %}
+        <p>{{ c.when }}: <strong>{{ c.challenger_name }} vs {{ c.opponent_name }}</strong> at {{ court(c) }}</p>
+        <form method="post" action="{{ url_for('games.record_turnout', challenge_id=c.id) }}" class="row">
+          <label class="row">How many of your players came?
+            <input class="small" name="players" type="number" min="0" value="{{ c.my_turnout if c.my_turnout is not none else '' }}" required>
+          </label>
+          <button>{{ 'Update' if c.my_turnout is not none else 'Save' }}</button>
+        </form>
+      {% endfor %}
+    </section>
+  {% endif %}
+
   {% if history %}
     <section>
       <h2>History</h2>

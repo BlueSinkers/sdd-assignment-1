@@ -17,6 +17,21 @@
     .muted { color: #888; }
     .row { display: flex; gap: 8px; }
     section { margin: 24px 0; }
+    .section-label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; color: #666; margin-bottom: 8px; }
+    .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+    .tile { border: 1px solid #e5e5e5; border-radius: 10px; padding: 12px 14px; background: #fff; }
+    .tile-label { font-size: 0.85rem; color: #555; }
+    .tile-value { font-size: 1.8rem; font-weight: 600; margin-top: 4px; color: #222; }
+    .tile-note { font-size: 0.75rem; color: #888; margin-top: 2px; }
+    .panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin: 24px 0; }
+    .panel { border: 1px solid #e5e5e5; border-radius: 10px; padding: 4px 14px 12px; }
+    .panel h2 { font-size: 1.05rem; }
+    table.bars td { border: 0; padding: 5px 4px; }
+    .bar-name { width: 40%; overflow-wrap: anywhere; }
+    .bar-cell { width: 50%; }
+    .bar { display: block; height: 10px; min-width: 4px; background: #c2410c; border-radius: 0 4px 4px 0; }
+    .bar-count { width: 10%; text-align: right; font-variant-numeric: tabular-nums; color: #222; }
+    input.small { width: 5em; }
     th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #eee; }
   </style>
 </head>
@@ -25,6 +40,7 @@
     <a href="{{ url_for('games.home') }}"><strong>Madrid Hoops</strong></a>
     <a href="{{ url_for('teams.team_list') }}">Teams</a>
     <a href="{{ url_for('games.courts') }}">Courts</a>
+    <a href="{{ url_for('games.stats') }}">Stats</a>
     {% if session.team_id %}<a href="{{ url_for('games.dashboard') }}">Dashboard</a>{% endif %}
     <div class="right">
       {% if session.team_id %}

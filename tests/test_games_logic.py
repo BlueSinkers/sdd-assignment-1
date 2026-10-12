@@ -186,3 +186,87 @@ def test_different_teams_and_court_do_not_conflict():
 def test_challenge_does_not_conflict_with_itself():
     saved = dict(NEW, id=5)
     assert logic.find_conflict(saved, [dict(saved, status="accepted")]) is None
+
+
+# --- validate_attendance ------------------------------------------------------
+
+PLAYED = game(5, challenger=1, opponent=2, court_id=10, start="2026-10-09T18:00")
+
+
+def test_team_in_played_game_can_record_turnout():
+    record, errors = logic.validate_attendance(PLAYED, 1, "5", roster_size=6, now=NOW)
+    assert errors == []
+    assert record == {"challenge_id": 5, "team_id": 1, "players_attended": 5}
+
+
+def test_zero_players_is_allowed():
+    record, _ = logic.validate_attendance(PLAYED, 2, "0", roster_size=5, now=NOW)
+    assert record["players_attended"] == 0
+
+
+def test_outside_team_cannot_record_turnout():
+    _, errors = logic.validate_attendance(PLAYED, 3, "4", roster_size=6, now=NOW)
+    assert "Only the two teams in this game can record turnout." in errors
+
+
+def test_turnout_only_for_agreed_games():
+    declined = dict(PLAYED, status="declined")
+    _, errors = logic.validate_attendance(declined, 1, "4", roster_size=6, now=NOW)
+    assert "Turnout can only be recorded for agreed games." in errors
+
+
+def test_turnout_not_before_game_starts():
+    future = dict(PLAYED, start_time="2026-10-18T18:00")
+    _, errors = logic.validate_attendance(future, 1, "4", roster_size=6, now=NOW)
+    assert "You can record turnout once the game has started." in errors
+
+
+def test_turnout_must_be_a_number():
+    _, errors = logic.validate_attendance(PLAYED, 1, "lots", roster_size=6, now=NOW)
+    assert "Number of players must be a whole number." in errors
+
+
+def test_turnout_cannot_exceed_roster_or_be_negative():
+    _, too_many = logic.validate_attendance(PLAYED, 1, "7", roster_size=6, now=NOW)
+    _, negative = logic.validate_attendance(PLAYED, 1, "-1", roster_size=6, now=NOW)
+    assert too_many == ["Enter a number from 0 to 6 (your roster size)."]
+    assert negative == ["Enter a number from 0 to 6 (your roster size)."]
+
+
+# --- compute_stats ------------------------------------------------------------
+
+def test_stats_with_no_data():
+    s = logic.compute_stats([], [], {}, NOW)
+    assert s["games_played"] == 0
+    assert s["acceptance_rate"] is None
+    assert s["avg_players_per_game"] is None
+    assert s["turnout_rate"] is None
+    assert s["busiest_courts"] == []
+
+
+def test_stats_counts_games_and_rates():
+    challenges = [
+        dict(game(1, 1, 2, 10, "2026-10-01T18:00"), format="5v5"),                       # played
+        dict(game(2, 1, 3, 10, "2026-10-05T18:00"), format="5v5"),                       # played
+        dict(game(3, 2, 3, 11, "2026-10-20T18:00"), format="3v3"),                       # upcoming
+        dict(game(4, 1, 2, 11, "2026-10-21T18:00", status="declined"), format="5v5"),
+        dict(game(5, 3, 1, 11, "2026-10-22T18:00", status="pending"), format="5v5"),     # open
+        dict(game(6, 3, 1, 11, "2026-10-02T18:00", status="pending"), format="5v5"),     # expired
+    ]
+    attendance = [
+        {"challenge_id": 1, "team_id": 1, "players_attended": 5},
+        {"challenge_id": 1, "team_id": 2, "players_attended": 4},
+        {"challenge_id": 2, "team_id": 1, "players_attended": 6},
+    ]
+    s = logic.compute_stats(challenges, attendance, {1: 6, 2: 5}, NOW)
+
+    assert s["games_played"] == 2
+    assert s["upcoming_games"] == 1
+    assert s["pending_challenges"] == 1
+    assert s["acceptance_rate"] == 75            # 3 accepted out of 4 answered
+    assert s["players_attended"] == 15
+    assert s["avg_players_per_game"] == 7.5      # 15 players over 2 games
+    assert s["turnout_rate"] == 88               # 15 of 17 roster spots (6 + 5 + 6)
+    assert s["games_by_format"] == {"3v3": 1, "5v5": 2}
+    assert s["busiest_courts"] == [(10, 2), (11, 1)]
+    assert s["most_active_teams"] == [(1, 2), (2, 2), (3, 2)]

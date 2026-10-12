@@ -1,9 +1,10 @@
-"""Games domain: rules for courts and challenges between teams.
+"""Games domain: rules for courts, challenges, turnout, and the stats dashboard.
 
 Plain Python only, no Flask and no SQL. Teams arrive as the small dicts from
 teams.api.get_team_summary, and the current time is passed in as `now` so the
 tests can control it.
 """
+from collections import Counter
 from datetime import datetime, timedelta
 
 # How long a court is considered busy for one game.
@@ -137,3 +138,78 @@ def find_conflict(challenge, accepted_games):
         if game["court_id"] == challenge["court_id"]:
             return "That court is already booked at that time."
     return None
+
+
+def validate_attendance(challenge, team_id, players_text, roster_size, now):
+    """Check a captain's turnout number for a game.
+
+    Only the two teams in an agreed game can record it, only once the game
+    has started, and the number must be between 0 and the team's roster size.
+    Returns (record, errors).
+    """
+    errors = []
+
+    if team_id not in (challenge["challenger_team_id"], challenge["opponent_team_id"]):
+        errors.append("Only the two teams in this game can record turnout.")
+    elif challenge["status"] != "accepted":
+        errors.append("Turnout can only be recorded for agreed games.")
+    elif parse_start_time(challenge["start_time"]) > now:
+        errors.append("You can record turnout once the game has started.")
+
+    try:
+        players = int(players_text)
+    except (TypeError, ValueError):
+        players = None
+        errors.append("Number of players must be a whole number.")
+
+    if players is not None and not 0 <= players <= roster_size:
+        errors.append(f"Enter a number from 0 to {roster_size} (your roster size).")
+
+    if errors:
+        return None, errors
+    return {"challenge_id": challenge["id"], "team_id": team_id, "players_attended": players}, []
+
+
+def top_counts(counter, limit=5):
+    """Most common ids first; ties broken by id so the order is stable."""
+    return sorted(counter.items(), key=lambda item: (-item[1], item[0]))[:limit]
+
+
+def compute_stats(challenges, attendance, roster_sizes, now):
+    """Numbers for the stats dashboard.
+
+    challenges: every challenge row. attendance: every attendance row.
+    roster_sizes: {team_id: player_count} for teams that recorded turnout.
+    Returns a dict of plain numbers and (id, count) lists; the page adds names.
+    """
+    now_text = now.strftime(TIME_FORMAT)
+    accepted = [c for c in challenges if c["status"] == "accepted"]
+    played = [c for c in accepted if c["start_time"] < now_text]
+    declined = sum(1 for c in challenges if c["status"] == "declined")
+    answered = len(accepted) + declined
+
+    players_attended = sum(a["players_attended"] for a in attendance)
+    games_with_turnout = len({a["challenge_id"] for a in attendance})
+    roster_total = sum(roster_sizes.get(a["team_id"], 0) for a in attendance)
+
+    team_games = Counter()
+    for c in accepted:
+        team_games[c["challenger_team_id"]] += 1
+        team_games[c["opponent_team_id"]] += 1
+
+    return {
+        "games_played": len(played),
+        "upcoming_games": len(accepted) - len(played),
+        "pending_challenges": sum(
+            1 for c in challenges if c["status"] == "pending" and c["start_time"] >= now_text
+        ),
+        "acceptance_rate": round(100 * len(accepted) / answered) if answered else None,
+        "players_attended": players_attended,
+        "avg_players_per_game": (
+            round(players_attended / games_with_turnout, 1) if games_with_turnout else None
+        ),
+        "turnout_rate": round(100 * players_attended / roster_total) if roster_total else None,
+        "games_by_format": {f: sum(1 for c in accepted if c["format"] == f) for f in ("3v3", "5v5")},
+        "busiest_courts": top_counts(Counter(c["court_id"] for c in accepted)),
+        "most_active_teams": top_counts(team_games),
+    }
