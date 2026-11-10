@@ -1,4 +1,4 @@
-"""Madrid Hoops: entry point.
+"""Madrid Hoops Teams service: entry point.
 
 Start with `python app.py`. Configuration comes only from environment
 variables:
@@ -12,7 +12,6 @@ import os
 from flask import Flask
 
 import db
-from games.routes import bp as games_bp
 from teams.routes import bp as teams_bp
 
 
@@ -24,7 +23,6 @@ def create_app():
     app.teardown_appcontext(db.close_conn)
 
     app.register_blueprint(teams_bp)
-    app.register_blueprint(games_bp)
 
     return app
 

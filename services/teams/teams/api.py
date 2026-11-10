@@ -1,8 +1,7 @@
 """Teams domain: the only functions other domains are allowed to call.
 
-This is the seam. The Games domain never reads the teams table itself; it asks
-here and gets back a small plain dict. In Assignment 2, when Teams becomes its
-own service, these functions become HTTP calls and Games does not change.
+This is the seam. The Games service never reads the teams table; it calls
+GET /api/teams/<id> (teams/routes.py), which returns what this function returns.
 """
 from teams import store
 

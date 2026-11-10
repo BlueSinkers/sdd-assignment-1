@@ -2,8 +2,6 @@ import pytest
 
 import db
 from games import store
-from teams import api as teams_api
-from teams import store as teams_store
 
 
 @pytest.fixture
@@ -72,17 +70,6 @@ def test_challenge_cannot_point_at_missing_court(conn):
     import sqlite3
     with pytest.raises(sqlite3.IntegrityError):
         store.create_challenge(conn, make_challenge(court_id=999))
-
-
-def test_teams_api_summary_hides_private_fields(conn):
-    team_id = teams_store.create_team(conn, {
-        "name": "Retiro Five", "password_hash": "hashed", "captain_name": "Abhi",
-        "format": "5v5", "player_count": 6, "skill_level": "casual", "district": None,
-    })
-    assert teams_api.get_team_summary(conn, team_id) == {
-        "id": team_id, "name": "Retiro Five", "format": "5v5", "player_count": 6,
-    }
-    assert teams_api.get_team_summary(conn, 999) is None
 
 
 def test_record_attendance_replaces_earlier_number(conn):

@@ -1,7 +1,7 @@
 """Games domain: rules for courts, challenges, turnout, and the stats dashboard.
 
 Plain Python only, no Flask and no SQL. Teams arrive as the small dicts from
-teams.api.get_team_summary, and the current time is passed in as `now` so the
+games.teams_client.get_team_summary, and the current time is passed in as `now` so the
 tests can control it.
 """
 from collections import Counter

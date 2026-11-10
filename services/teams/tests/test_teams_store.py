@@ -1,7 +1,7 @@
 import pytest
 
 import db
-from teams import store
+from teams import api, store
 
 
 @pytest.fixture
@@ -61,3 +61,14 @@ def test_init_db_twice_keeps_data(tmp_path):
     conn = db.connect(path)
     assert len(store.list_teams(conn)) == 1
     conn.close()
+
+
+def test_teams_api_summary_hides_private_fields(conn):
+    team_id = store.create_team(conn, {
+        "name": "Retiro Five", "password_hash": "hashed", "captain_name": "Abhi",
+        "format": "5v5", "player_count": 6, "skill_level": "casual", "district": None,
+    })
+    assert api.get_team_summary(conn, team_id) == {
+        "id": team_id, "name": "Retiro Five", "format": "5v5", "player_count": 6,
+    }
+    assert api.get_team_summary(conn, 999) is None

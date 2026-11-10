@@ -1,10 +1,19 @@
 """Teams domain: web pages for sign-up, login, logout and the team list."""
-from flask import Blueprint, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
 
 import db
-from teams import logic, store
+from teams import api, logic, store
 
 bp = Blueprint("teams", __name__)
+
+
+@bp.route("/api/teams/<int:team_id>")
+def team_summary(team_id):
+    """Public facts about one team, as JSON. The Games service calls this."""
+    summary = api.get_team_summary(db.get_conn(), team_id)
+    if summary is None:
+        return jsonify({"error": "team not found"}), 404
+    return jsonify(summary)
 
 
 @bp.route("/teams")

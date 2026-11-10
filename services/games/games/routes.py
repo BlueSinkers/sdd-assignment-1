@@ -6,7 +6,7 @@ from flask import Blueprint, flash, redirect, render_template, request, session,
 
 import db
 from games import logic, store
-from teams import api as teams_api
+from games import teams_client
 
 bp = Blueprint("games", __name__)
 
@@ -26,11 +26,11 @@ def logged_in_team_id():
 def describe(conn, challenge):
     """Turn a challenge row into what a page shows: team and court names.
 
-    Team names come from teams_api, not a SQL join, so Games never reads
-    the teams table (ADR 2).
+    Team names come from the Teams service over HTTP (teams_client), not a
+    SQL join, so Games never reads the teams table (ADR 2).
     """
-    challenger = teams_api.get_team_summary(conn, challenge["challenger_team_id"])
-    opponent = teams_api.get_team_summary(conn, challenge["opponent_team_id"])
+    challenger = teams_client.get_team_summary(challenge["challenger_team_id"])
+    opponent = teams_client.get_team_summary(challenge["opponent_team_id"])
     court = store.get_court(conn, challenge["court_id"])
     return {
         **dict(challenge),
@@ -82,8 +82,8 @@ def challenge(opponent_id):
         return redirect(url_for("teams.login"))
 
     conn = db.get_conn()
-    challenger = teams_api.get_team_summary(conn, logged_in_team_id())
-    opponent = teams_api.get_team_summary(conn, opponent_id)
+    challenger = teams_client.get_team_summary(logged_in_team_id())
+    opponent = teams_client.get_team_summary(opponent_id)
     if opponent is None:
         flash("That team does not exist.")
         return redirect(url_for("teams.team_list"))
@@ -175,7 +175,7 @@ def record_turnout(challenge_id):
         flash("That game does not exist.")
         return redirect(url_for("games.dashboard"))
 
-    team = teams_api.get_team_summary(conn, team_id)
+    team = teams_client.get_team_summary(team_id)
     record, errors = logic.validate_attendance(
         game, team_id, request.form.get("players"), team["player_count"], madrid_now()
     )
@@ -192,12 +192,12 @@ def stats():
     conn = db.get_conn()
     attendance = store.list_attendance(conn)
 
-    # Team details come through teams_api, never the teams table (ADR 2).
+    # Team details come from the Teams service over HTTP, never the teams table (ADR 2).
     team_cache = {}
 
     def team(team_id):
         if team_id not in team_cache:
-            team_cache[team_id] = teams_api.get_team_summary(conn, team_id)
+            team_cache[team_id] = teams_client.get_team_summary(team_id)
         return team_cache[team_id]
 
     roster_sizes = {
