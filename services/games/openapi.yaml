@@ -1,0 +1,165 @@
+openapi: 3.0.3
+info:
+  title: Madrid Hoops Games API
+  version: "2.0.0"
+  description: Courts, challenges, turnout, and stats. Calls Teams over HTTP for team facts.
+servers:
+  - url: http://localhost:8002
+paths:
+  /health:
+    get:
+      summary: Service and own-database health
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, db, version]
+                properties:
+                  status: { type: string }
+                  db: { type: string }
+                  version: { type: string }
+        "503":
+          description: Database unreachable
+  /api/courts:
+    get:
+      summary: List courts
+      responses:
+        "200":
+          description: Court list
+    post:
+      summary: Propose a court
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [address]
+              properties:
+                name: { type: string }
+                address: { type: string }
+                maps_url: { type: string }
+      responses:
+        "201": { description: Created }
+        "400": { description: Validation error }
+        "401": { description: Unauthorized }
+  /api/games/upcoming:
+    get:
+      summary: Upcoming accepted games
+      responses:
+        "200":
+          description: Games; may set teams_degraded if Teams is down
+  /api/challenges:
+    post:
+      summary: Send a challenge (server-side cross-seam call to Teams)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [opponent_team_id, court_id, start_time]
+              properties:
+                opponent_team_id: { type: integer }
+                court_id: { type: integer }
+                start_time: { type: string, example: "2026-12-01T18:00" }
+                note: { type: string }
+      responses:
+        "201": { description: Challenge created }
+        "400": { description: Validation or clash }
+        "401": { description: Unauthorized }
+        "503":
+          description: Teams unavailable
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error: { type: string, example: teams_unavailable }
+                  message: { type: string }
+  /api/challenges/{challenge_id}/accept:
+    post:
+      summary: Opponent agrees to play
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: challenge_id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200": { description: Updated }
+        "400": { description: Not allowed or clash }
+        "401": { description: Unauthorized }
+  /api/challenges/{challenge_id}/decline:
+    post:
+      summary: Opponent declines
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: challenge_id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200": { description: Updated }
+        "400": { description: Not allowed }
+        "401": { description: Unauthorized }
+  /api/challenges/{challenge_id}/cancel:
+    post:
+      summary: Challenger cancels
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: challenge_id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200": { description: Updated }
+        "400": { description: Not allowed }
+        "401": { description: Unauthorized }
+  /api/challenges/{challenge_id}/turnout:
+    post:
+      summary: Record turnout (calls Teams for roster size)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: challenge_id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [players]
+              properties:
+                players: { type: integer }
+      responses:
+        "200": { description: Saved }
+        "400": { description: Validation error }
+        "401": { description: Unauthorized }
+        "503": { description: Teams unavailable }
+  /api/dashboard:
+    get:
+      summary: Captain dashboard
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Challenge buckets }
+        "401": { description: Unauthorized }
+        "503": { description: Teams unavailable }
+  /api/stats:
+    get:
+      summary: Aggregate stats
+      responses:
+        "200":
+          description: Stats; may set teams_degraded
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer

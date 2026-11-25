@@ -1,0 +1,89 @@
+# Madrid Hoops — local stack (Assignment 2)
+# Usage: cp .env.example .env   &&   docker compose up --build
+#
+# Service containers (count toward the "exactly two" rule): teams, games.
+# sqlserver / db-init / ui are infrastructure helpers, not domain services.
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql-data:/var/opt/mssql
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$$MSSQL_SA_PASSWORD" -C -Q "SELECT 1" || exit 1
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
+  db-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    environment:
+      MSSQL_HOST: sqlserver
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+      TEAMS_DB_PASSWORD: ${TEAMS_DB_PASSWORD}
+      GAMES_DB_PASSWORD: ${GAMES_DB_PASSWORD}
+    volumes:
+      - ./db/init.sh:/init.sh:ro
+    entrypoint: ["bash", "/init.sh"]
+    restart: "no"
+
+  teams:
+    build:
+      context: ./services/teams
+      args:
+        GIT_SHA: ${GIT_SHA:-local}
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    environment:
+      PORT: "8000"
+      DATABASE_URL: mssql+pymssql://teams_user:${TEAMS_DB_PASSWORD}@sqlserver:1433/teams
+      SECRET_KEY: ${SECRET_KEY:-dev-only-change-me}
+      UI_ORIGIN: ${UI_ORIGIN:-http://localhost:8080}
+      VERSION: ${GIT_SHA:-local}
+    ports:
+      - "8001:8000"
+
+  games:
+    build:
+      context: ./services/games
+      args:
+        GIT_SHA: ${GIT_SHA:-local}
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+      teams:
+        condition: service_started
+    environment:
+      PORT: "8000"
+      DATABASE_URL: mssql+pymssql://games_user:${GAMES_DB_PASSWORD}@sqlserver:1433/games
+      SECRET_KEY: ${SECRET_KEY:-dev-only-change-me}
+      TEAMS_URL: http://teams:8000
+      TEAMS_TIMEOUT_S: "2"
+      UI_ORIGIN: ${UI_ORIGIN:-http://localhost:8080}
+      VERSION: ${GIT_SHA:-local}
+    ports:
+      - "8002:8000"
+
+  ui:
+    image: nginx:alpine
+    depends_on:
+      - teams
+      - games
+    ports:
+      - "8080:80"
+    volumes:
+      - ./ui:/usr/share/nginx/html:ro
+      - ./ui/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+
+volumes:
+  mssql-data:

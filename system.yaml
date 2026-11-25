@@ -1,0 +1,56 @@
+# yaml-language-server: $schema=./system.schema.json
+# Update student/prefix/public_url/azure names with your IE username before Azure deploy.
+student: bluesinkers
+prefix: bluesinkers
+public_url: https://bluesinkersui.z28.web.core.windows.net
+ui:
+  path: ui
+  storage_account: bluesinkersui
+  calls: [teams, games]
+azure:
+  resource_group: rg-bluesinkers
+  container_apps_environment: bluesinkers-env
+  sql_server: bluesinkers-sql
+  registry: ghcr.io/bluesinkers
+services:
+  teams:
+    description: Team accounts, captain login, and public team summaries for the Games seam.
+    path: services/teams
+    openapi: services/teams/openapi.yaml
+    port_default: 8001
+    health: /health
+    migrations: services/teams/migrations
+    env:
+      PORT: { default: 8000, description: Port the service listens on }
+      DATABASE_URL: { secret: true, description: Connection string of the teams database }
+      SECRET_KEY: { secret: true, description: Shared secret for signing captain bearer tokens }
+      UI_ORIGIN: { default: "http://localhost:8080", description: Allowed CORS origin for the static UI }
+      VERSION: { default: "dev", description: Git SHA reported by /health }
+    calls: []
+    azure:
+      container_app: bluesinkers-teams
+      sql_database: bluesinkers-teams-db
+  games:
+    description: Courts, challenges, turnout, and stats. Calls Teams over HTTP for team facts.
+    path: services/games
+    openapi: services/games/openapi.yaml
+    port_default: 8002
+    health: /health
+    migrations: services/games/migrations
+    env:
+      PORT: { default: 8000, description: Port the service listens on }
+      DATABASE_URL: { secret: true, description: Connection string of the games database }
+      SECRET_KEY: { secret: true, description: Shared secret for verifying captain bearer tokens }
+      TEAMS_URL: { default: "http://teams:8000", description: Base URL of the Teams service }
+      TEAMS_TIMEOUT_S: { default: 2, description: Timeout in seconds for calls to Teams }
+      UI_ORIGIN: { default: "http://localhost:8080", description: Allowed CORS origin for the static UI }
+      VERSION: { default: "dev", description: Git SHA reported by /health }
+    calls:
+      - service: teams
+        url_env: TEAMS_URL
+        endpoints: ["GET /api/teams/{id}"]
+        timeout_s: 2
+        on_failure: Challenge, turnout, and dashboard return HTTP 503 with teams_unavailable; upcoming games and stats degrade with teams_degraded=true.
+    azure:
+      container_app: bluesinkers-games
+      sql_database: bluesinkers-games-db

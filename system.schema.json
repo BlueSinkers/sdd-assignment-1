@@ -1,0 +1,106 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/sdd/system.schema.json",
+  "title": "SDD Assignment 2 system description",
+  "type": "object",
+  "required": ["student", "prefix", "public_url", "ui", "azure", "services"],
+  "additionalProperties": false,
+  "properties": {
+    "student": { "type": "string", "minLength": 1 },
+    "prefix": { "type": "string", "minLength": 1 },
+    "public_url": { "type": "string", "format": "uri" },
+    "ui": {
+      "type": "object",
+      "required": ["path", "storage_account", "calls"],
+      "additionalProperties": false,
+      "properties": {
+        "path": { "type": "string" },
+        "storage_account": { "type": "string", "pattern": "^[a-z0-9]+$" },
+        "calls": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1
+        }
+      }
+    },
+    "azure": {
+      "type": "object",
+      "required": ["resource_group", "container_apps_environment", "sql_server", "registry"],
+      "additionalProperties": false,
+      "properties": {
+        "resource_group": { "type": "string" },
+        "container_apps_environment": { "type": "string" },
+        "sql_server": { "type": "string" },
+        "registry": { "type": "string" }
+      }
+    },
+    "services": {
+      "type": "object",
+      "minProperties": 2,
+      "maxProperties": 2,
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "description",
+          "path",
+          "openapi",
+          "port_default",
+          "health",
+          "migrations",
+          "env",
+          "calls",
+          "azure"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "description": { "type": "string" },
+          "path": { "type": "string" },
+          "openapi": { "type": "string" },
+          "port_default": { "type": "integer", "minimum": 1 },
+          "health": { "type": "string" },
+          "migrations": { "type": "string" },
+          "env": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "default": {},
+                "description": { "type": "string" },
+                "secret": { "type": "boolean" }
+              },
+              "required": ["description"]
+            }
+          },
+          "calls": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["service", "url_env", "endpoints", "timeout_s", "on_failure"],
+              "additionalProperties": false,
+              "properties": {
+                "service": { "type": "string" },
+                "url_env": { "type": "string" },
+                "endpoints": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                },
+                "timeout_s": { "type": "number", "minimum": 0 },
+                "on_failure": { "type": "string" }
+              }
+            }
+          },
+          "azure": {
+            "type": "object",
+            "required": ["container_app", "sql_database"],
+            "additionalProperties": false,
+            "properties": {
+              "container_app": { "type": "string" },
+              "sql_database": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

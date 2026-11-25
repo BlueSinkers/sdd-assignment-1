@@ -39,3 +39,19 @@ Context: Pickup basketball teams have rotating players, and every decision the a
 Decision: Not to build player accounts. Each team has a single login controlled by its captain, and turnout is a single number the captain records after each game.
 Alternatives considered: Individual player accounts with per-player RSVPs and attendance, rejected because it adds a players table, team membership, invitations and more login logic, roughly doubling the Teams domain, for features the core flow does not need, and it would blur the Teams/Games seam (Games would need to know about individual players).
 Consequences: The app stays small and the seam stays clean: Games only ever needs a team id and roster size. The costs are that a team shares one password, there is no per-player history, and turnout relies on the captain's honesty. Player accounts could be added later as their own domain without changing how challenges work.
+
+## 6. Split into Teams and Games services over HTTP (ADR-2 held)
+Date: 2026-11-25
+Status: Decided
+Context: Assignment 2 requires one process and database per feature domain. Assignment 1 already kept Games off the teams table via `teams.api.get_team_summary` (ADR-2).
+Decision: Keep the same seam. Teams owns the `teams` table and exposes JSON including `GET /api/teams/{id}`. Games owns courts, challenges, and attendance, and calls Teams with `TEAMS_URL` + `TEAMS_TIMEOUT_S`. Captains authenticate with a bearer token signed by a shared `SECRET_KEY`. The UI is static files that call both services; the required server-side cross-seam flow is creating a challenge (and turnout / dashboard), where Games must ask Teams for team facts before writing.
+Alternatives considered: Moving all enrichment into the browser only, rejected because §3 requires at least one server-side cross-seam flow. Merging domains again, rejected because it fails the two-service rule.
+Consequences: ADR-2 held. Integrity across team ids is enforced in application code (and by trusting Teams' responses), not by SQL foreign keys. Partial failure is explicit: challenge/dashboard/turnout return 503 `teams_unavailable`; upcoming games and stats can degrade with `teams_degraded`.
+
+## 7. SQL Server per service with numbered migrations
+Date: 2026-11-25
+Status: Decided
+Context: SQLite and "create schema on boot" are replaced by SQL Server and versioned migrations that must preserve data.
+Decision: Each service reads `DATABASE_URL`, runs a small migration runner on startup, and records applied files in `schema_migrations`. Migrations are numbered SQL files (`001_init.sql`, then a data-preserving `002_*.sql` that adds a nullable column). Forward-only: a bad migration in production is fixed by a new migration (or restore from Azure SQL backup / point-in-time restore), never by editing an applied file or recreating the database.
+Alternatives considered: Alembic, rejected for this project size so every SQL line stays visible for the comprehension check. Recreating tables on deploy, rejected because it destroys captain data and fails §4.
+Consequences: Local compose uses one SQL Server with two databases and two logins (`db/init.sh`). Azure will use two serverless databases on one logical server. The cost is hand-ported SQL (IDENTITY, NVARCHAR, MERGE) instead of SQLite.

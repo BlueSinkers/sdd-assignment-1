@@ -1,0 +1,5 @@
+-- Reference schema notes only. Local bootstrap is db/init.sh (compose db-init).
+-- Azure logins are created once during initial setup, not by this file.
+--
+-- Databases: teams, games
+-- Logins:    teams_user -> teams only; games_user -> games only

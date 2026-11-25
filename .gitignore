@@ -3,7 +3,7 @@
 venv/
 .env
 
-# Local SQLite data (the app creates it on first boot; never commit a .db)
+# Local data (never commit databases)
 data/
 *.db
 *.sqlite
@@ -15,5 +15,6 @@ __pycache__/
 .pytest_cache/
 .coverage
 htmlcov/
+.ruff_cache/
 
 .DS_Store

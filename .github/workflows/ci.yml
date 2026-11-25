@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  teams:
+    name: Teams — lint, test, image
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/teams
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          pip install -r requirements.txt -r requirements-dev.txt
+          pip install openapi-spec-validator==0.7.1 pyyaml==6.0.2
+      - name: Lint
+        run: ruff check .
+      - name: Test with coverage
+        env:
+          SECRET_KEY: ci-secret
+        run: PYTHONPATH=. pytest -q --cov=teams.logic --cov=auth --cov-fail-under=70
+      - name: Validate OpenAPI
+        run: python -c "import yaml; from openapi_spec_validator import validate; validate(yaml.safe_load(open('openapi.yaml')))"
+      - name: Build image
+        run: docker build -t hoops-teams:${{ github.sha }} .
+
+  games:
+    name: Games — lint, test, image
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/games
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          pip install -r requirements.txt -r requirements-dev.txt
+          pip install openapi-spec-validator==0.7.1 pyyaml==6.0.2
+      - name: Lint
+        run: ruff check .
+      - name: Test with coverage
+        env:
+          SECRET_KEY: ci-secret
+          TEAMS_URL: http://127.0.0.1:9
+          TEAMS_TIMEOUT_S: "1"
+        run: PYTHONPATH=. pytest -q --cov=games.logic --cov=games.teams_client --cov=games.store --cov-fail-under=70
+
+      - name: Validate OpenAPI
+        run: python -c "import yaml; from openapi_spec_validator import validate; validate(yaml.safe_load(open('openapi.yaml')))"
+      - name: Build image
+        run: docker build -t hoops-games:${{ github.sha }} .
+
+  system:
+    name: system.yaml + schema
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate system.yaml
+        run: |
+          pip install pyyaml==6.0.2 jsonschema==4.23.0
+          python - <<'PY'
+          import json, yaml
+          from jsonschema import validate
+          schema = json.load(open("system.schema.json"))
+          data = yaml.safe_load(open("system.yaml"))
+          validate(data, schema)
+          print("system.yaml OK")
+          PY
