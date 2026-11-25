@@ -6,7 +6,8 @@ import requests
 from games.teams_client import TeamsUnavailable, get_team_summary
 
 
-def test_get_team_summary_ok():
+def test_get_team_summary_ok(monkeypatch):
+    monkeypatch.setenv("TEAMS_TIMEOUT_S", "2")
     response = MagicMock()
     response.status_code = 200
     response.json.return_value = {
@@ -20,6 +21,7 @@ def test_get_team_summary_ok():
     assert summary["name"] == "Retiro"
     get.assert_called_once()
     assert get.call_args.kwargs["timeout"] == 2.0
+
 
 
 def test_get_team_summary_404():

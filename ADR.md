@@ -55,3 +55,27 @@ Context: SQLite and "create schema on boot" are replaced by SQL Server and versi
 Decision: Each service reads `DATABASE_URL`, runs a small migration runner on startup, and records applied files in `schema_migrations`. Migrations are numbered SQL files (`001_init.sql`, then a data-preserving `002_*.sql` that adds a nullable column). Forward-only: a bad migration in production is fixed by a new migration (or restore from Azure SQL backup / point-in-time restore), never by editing an applied file or recreating the database.
 Alternatives considered: Alembic, rejected for this project size so every SQL line stays visible for the comprehension check. Recreating tables on deploy, rejected because it destroys captain data and fails §4.
 Consequences: Local compose uses one SQL Server with two databases and two logins (`db/init.sh`). Azure will use two serverless databases on one logical server. The cost is hand-ported SQL (IDENTITY, NVARCHAR, MERGE) instead of SQLite.
+
+## 8. Serverless hosting on Azure (planned shape)
+Date: 2026-11-25
+Status: Decided
+Context: Assignment 2 requires pay-per-use Azure only: Container Apps Consumption (scale to zero), Azure SQL serverless (free offer), and a Storage static website. Fixed-cost resources need justification.
+Decision: Two Container Apps (teams, games) in one environment, min replicas 0 / max 1, images from GHCR tagged by commit SHA. Two serverless databases on one logical SQL server. UI on one storage account static website. Pipeline signs in with a user-assigned managed identity via OIDC (no Azure password in GitHub). Cold starts and SQL resume (error 40613) are handled with connection retries in the services and a clear “starting up, try again” message in the UI on 503.
+Alternatives considered: Azure Container Registry, rejected for the fixed monthly cost while GHCR is free. Always-on App Service / VMs, out of scope (§1c).
+Consequences: Idle cost stays near zero. First request after idle may fail until the container and database wake; health checks after deploy must wait. At 100x traffic we would raise max replicas, consider Azure SQL vCore limits, and possibly add caching or a queue (documented then in a new ADR)—not needed for the graded load.
+
+## 9. Pipeline gates and cross-seam testing with a Teams stub
+Date: 2026-11-25
+Status: Decided
+Context: CI must lint, test, enforce ≥70% coverage on core logic, validate OpenAPI/`system.yaml`, and build images. A cross-seam integration test is required.
+Decision: GitHub Actions runs separate jobs for Teams and Games. Coverage gates target core packages (`teams.logic`/`auth`, `games.logic`/`teams_client`/`store`). The cross-seam test drives Games routes with `teams_client` stubbed to raise `TeamsUnavailable` and asserts HTTP 503 `teams_unavailable` (no live second process required in CI). Deliberately not tested in CI yet: full compose end-to-end against a real SQL Server container (run locally with `docker compose`); Azure CD (next PR after subscription setup).
+Alternatives considered: Always booting both services in CI, deferred until SQL Server service-container setup is reliable in Actions; stub keeps the seam contract fast and deterministic.
+Consequences: Partial-failure behaviour is locked by tests. Real SQL + compose remains a manual/local check until the SQL Server CI job is added.
+
+## 10. Deliberately not built: API gateway / third container
+Date: 2026-11-25
+Status: Decided
+Context: §1c forbids a third service container (frontend, gateway, or other). A gateway would give one origin for cookies and hide service URLs from the browser.
+Decision: Do not add a gateway or BFF. The browser calls both services’ public HTTPS ingress with CORS limited to the UI origin; compose serves the UI with stock `nginx:alpine` (not counted as a domain service).
+Alternatives considered: nginx reverse proxy as a third app container, rejected as out of scope. Putting Jinja back behind one service, rejected because the UI must be a static site on Storage.
+Consequences: CORS and bearer tokens are required. A gateway would be worth building if we needed httpOnly cookies across both APIs, response aggregation to cut chatty browser calls, or a single public hostname without exposing Container App URLs—none of which the brief requires.
