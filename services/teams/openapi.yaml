@@ -1,0 +1,230 @@
+openapi: 3.0.3
+info:
+  title: Madrid Hoops Teams API
+  version: 1.0.0
+  description: Teams microservice — register, login, list, and team summaries.
+servers:
+  - url: http://localhost:5001
+    description: Local Teams service
+paths:
+  /health:
+    get:
+      summary: Liveness and database readiness
+      operationId: getHealth
+      responses:
+        "200":
+          description: Service and database are healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+        "503":
+          description: Database unreachable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+  /api/register:
+    post:
+      summary: Register a new team
+      operationId: registerTeam
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: Team created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation failed or name taken
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorList"
+  /api/login:
+    post:
+      summary: Log in as a team captain
+      operationId: loginTeam
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login succeeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Wrong credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/teams:
+    get:
+      summary: Public list of all teams
+      operationId: listTeams
+      responses:
+        "200":
+          description: Teams without password hashes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TeamPublic"
+  /api/teams/{id}:
+    get:
+      summary: Team summary for the Games seam
+      operationId: getTeamSummary
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Team summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamSummary"
+        "404":
+          description: Team not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/me:
+    get:
+      summary: Current authenticated team
+      operationId: getMe
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Public fields for the logged-in team
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamPublic"
+        "401":
+          description: Missing or invalid bearer token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    Health:
+      type: object
+      required: [status, db, version]
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+        db:
+          type: string
+          enum: [ok, error]
+        version:
+          type: string
+    RegisterRequest:
+      type: object
+      required: [name, password, captain_name, format, player_count, skill_level]
+      properties:
+        name:
+          type: string
+          maxLength: 40
+        password:
+          type: string
+          minLength: 6
+        captain_name:
+          type: string
+        format:
+          type: string
+          enum: [3v3, 5v5]
+        player_count:
+          type: integer
+        skill_level:
+          type: string
+          enum: [casual, intermediate, competitive]
+        district:
+          type: string
+          nullable: true
+    LoginRequest:
+      type: object
+      required: [name, password]
+      properties:
+        name:
+          type: string
+        password:
+          type: string
+    TeamPublic:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        captain_name:
+          type: string
+        format:
+          type: string
+        player_count:
+          type: integer
+        skill_level:
+          type: string
+        district:
+          type: string
+          nullable: true
+        badge_color:
+          type: string
+          nullable: true
+    TeamSummary:
+      type: object
+      required: [id, name, format, player_count]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        format:
+          type: string
+        player_count:
+          type: integer
+    AuthResponse:
+      type: object
+      required: [token, team]
+      properties:
+        token:
+          type: string
+        team:
+          $ref: "#/components/schemas/TeamPublic"
+    ErrorList:
+      type: object
+      required: [errors]
+      properties:
+        errors:
+          type: array
+          items:
+            type: string
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
